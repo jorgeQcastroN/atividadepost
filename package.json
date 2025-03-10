@@ -7,15 +7,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jorgeQcastroN/atividadepost.git"
+    "url": "git+https://github.com/hercullesmelo/av2.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/jorgeQcastroN/atividadepost/issues"
+    "url": "https://github.com/hercullesmelo/av2.git"
   },
-  "homepage": "https://github.com/jorgeQcastroN/atividadepost#readme",
+  "homepage": "https://github.com/hercullesmelo/av2.git",
   "description": "",
   "dependencies": {
     "dotenv": "^16.4.7",
