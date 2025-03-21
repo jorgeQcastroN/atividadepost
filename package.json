@@ -1,5 +1,5 @@
 {
-  "name": "atividadepost",
+  "name": "af",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -7,20 +7,22 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/hercullesmelo/av2.git"
+    "url": "git+https://github.com/jorgeQcastroN/atividadepost.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/hercullesmelo/av2.git"
+    "url": "https://github.com/jorgeQcastroN/atividadepost/issues"
   },
-  "homepage": "https://github.com/hercullesmelo/av2.git",
+  "homepage": "https://github.com/jorgeQcastroN/atividadepost#readme",
   "description": "",
   "dependencies": {
-    "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "jest": "^29.7.0",
     "jsonwebtoken": "^9.0.2",
-    "uuid": "^11.1.0"
+    "supertest": "^7.1.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   }
 }

@@ -1,101 +1,179 @@
-require('dotenv').config();
+// Importando pacotes necessários
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
+const request = require('supertest');
 
 const app = express();
-const port = 3000;
 app.use(express.json());
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-// Lista de usuários (simulação de banco de dados)
+const SECRET_KEY = "secreto123";
 let users = [];
 
-// Usuário fictício para login
-const adminUser = {
-    id: "1",
-    username: "admin",
-    password: "123456"
+// Configuração do Swagger
+const swaggerOptions = {
+    definition: {
+        openapi: "3.0.0",
+        info: {
+            title: "API com JWT e Swagger",
+            version: "1.0.0",
+            description: "API para gerenciar usuários com autenticação JWT.",
+        },
+        servers: [{ url: "http://localhost:3000" }]
+    },
+    apis: ["./server.js"],
 };
+const swaggerDocs = swaggerJsdoc(swaggerOptions);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// Middleware para verificar autenticação
-const authenticateToken = (req, res, next) => {
-    const token = req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
-        return res.status(401).json({ error: "Acesso negado! Token não fornecido." });
-    }
-
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded;
+// Middleware de autenticação
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: "Acesso negado! Token não fornecido." });
+    jwt.verify(token, SECRET_KEY, (err, user) => {
+        if (err) return res.status(403).json({ error: "Token inválido." });
+        req.user = user;
         next();
-    } catch (error) {
-        return res.status(403).json({ error: "Token inválido ou expirado." });
-    }
-};
+    });
+}
 
-// Rota de login (gera um token JWT)
+// Rota para gerar token
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Gera um token JWT
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token gerado com sucesso
+ */
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
-
-    if (username !== adminUser.username || password !== adminUser.password) {
-        return res.status(401).json({ error: "Credenciais inválidas!" });
+    if (username === "admin" && password === "123456") {
+        const token = jwt.sign({ username }, SECRET_KEY, { expiresIn: '1h' });
+        return res.json({ token });
     }
-
-    const token = jwt.sign({ id: adminUser.id, username: adminUser.username }, JWT_SECRET, { expiresIn: "1h" });
-    res.json({ token });
+    res.status(401).json({ error: "Credenciais inválidas" });
 });
 
-// Rota protegida: GET /users (apenas usuários autenticados podem acessar)
+// Rota GET - Listar usuários (Protegida por JWT)
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Retorna a lista de usuários cadastrados
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de usuários retornada com sucesso
+ */
 app.get('/users', authenticateToken, (req, res) => {
     res.json(users);
 });
 
-// Rota POST /users - Adiciona um novo usuário
+// Rota POST - Criar usuário
+/**
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Cria um novo usuário
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Usuário criado com sucesso
+ */
 app.post('/users', (req, res) => {
     const { nome, email } = req.body;
-
-    if (!nome || !email) {
-        return res.status(400).json({ error: "Nome e e-mail são obrigatórios." });
-    }
-
-    const newUser = { id: uuidv4(), nome, email };
+    const id = users.length + 1;
+    const newUser = { id, nome, email };
     users.push(newUser);
     res.status(201).json(newUser);
 });
 
-// Rota PUT /users/:id - Atualiza os dados de um usuário pelo ID
+// Rota PUT - Atualizar usuário
+/**
+ * @swagger
+ * /users/{id}:
+ *   put:
+ *     summary: Atualiza um usuário pelo ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Usuário atualizado com sucesso
+ */
 app.put('/users/:id', (req, res) => {
     const { id } = req.params;
     const { nome, email } = req.body;
-
-    const user = users.find(user => user.id === id);
-    if (!user) {
-        return res.status(404).json({ error: "Usuário não encontrado." });
-    }
-
-    user.nome = nome || user.nome;
-    user.email = email || user.email;
-
+    const user = users.find(u => u.id == id);
+    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
+    user.nome = nome;
+    user.email = email;
     res.json(user);
 });
 
-// Rota DELETE /users/:id - Remove um usuário pelo ID
+// Rota DELETE - Remover usuário
+/**
+ * @swagger
+ * /users/{id}:
+ *   delete:
+ *     summary: Remove um usuário pelo ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       204:
+ *         description: Usuário removido com sucesso
+ */
 app.delete('/users/:id', (req, res) => {
     const { id } = req.params;
-    const index = users.findIndex(user => user.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({ error: "Usuário não encontrado." });
-    }
-
-    users.splice(index, 1);
+    users = users.filter(u => u.id != id);
     res.status(204).send();
 });
 
-// Inicia o servidor
-app.listen(port, () => {
-    console.log(`Servidor rodando em http://localhost:${port}`);
-});
+// Iniciando o servidor
+app.listen(3000, () => console.log("Servidor rodando em http://localhost:3000"));
+
+module.exports = app;
